@@ -1,0 +1,19 @@
+{
+  "name": "debgmap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -r tmp/ dist/",
+    "mkdirs": "mkdir tmp dist",
+    "dlShpFile": "curl 'https://www2.census.gov/geo/tiger/GENZ2016/shp/cb_2016_10_bg_500k.zip' -o tmp/cb_2016_10_bg_500k.zip",
+    "unzipShpFile": "unzip -d tmp/ -o tmp/cb_2016_10_bg_500k.zip",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "convert2GeoJson": "node_modules/shapefile/bin/shp2json cb_2016_10_bg_500k.shp -o tmp/de_bg.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "shapefile": "^0.6.6"
+  }
+}
