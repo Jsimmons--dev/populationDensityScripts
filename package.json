@@ -6,14 +6,30 @@
   "scripts": {
     "clean": "rm -r tmp/ dist/",
     "mkdirs": "mkdir tmp dist",
-    "dlShpFile": "curl 'https://www2.census.gov/geo/tiger/GENZ2016/shp/cb_2016_10_bg_500k.zip' -o tmp/cb_2016_10_bg_500k.zip",
-    "unzipShpFile": "unzip -d tmp/ -o tmp/cb_2016_10_bg_500k.zip",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "convert2GeoJson": "node_modules/shapefile/bin/shp2json cb_2016_10_bg_500k.shp -o tmp/de_bg.json"
+    "dlShpFile": "curl 'https://www2.census.gov/geo/tiger/GENZ2015/shp/cb_2015_36_tract_500k.zip' -o tmp/geo.zip",
+    "unzipShpFile": "unzip -d tmp/ -o tmp/geo.zip",
+    "convert2GeoJson": "shp2json tmp/cb_2015_36_tract_500k.shp -o tmp/state.json",
+    "project2Albers": "geoproject  'd3.geoConicEqualArea().parallels([34, 40.5]).rotate([71, 0]).fitSize([960, 960], d)' < tmp/state.json > tmp/albers.json",
+    "convert2Svg": "geo2svg -w 960 -h 960 < tmp/albers.json > tmp/state.svg",
+    "processShpFileIntoSVG": "npm run dlShpFile;npm run unzipShpFile;npm run convert2GeoJson;npm run project2Albers;npm run convert2Svg",
+    "convert2ndjson":"ndjson-split 'd.features' < tmp/albers.json > tmp/albers.ndjson",
+    "mapFeature": "ndjson-map 'd.id = d.properties.GEOID.slice(2), d' < tmp/albers.ndjson > tmp/albers-id.ndjson",
+    "getVarData":"curl 'https://api.census.gov/data/2015/acs/acs5?get=B01003_001E&for=tract:*&in=state:36' -o tmp/varData.json",
+    "mergeData":"ndjson-cat tmp/varData.json | ndjson-split 'd.slice(1)' | ndjson-map '{id: d[2] + d[3], B01003: +d[0]}' > tmp/varData.ndjson",
+    "joinData":"ndjson-join 'd.id' tmp/albers-id.ndjson tmp/varData.ndjson > tmp/albers-join.ndjson",
+    "computePopDensity":"ndjson-map 'd[0].properties = {density: Math.floor(d[1].B01003 / d[0].properties.ALAND * 2589975.2356)}, d[0]' < tmp/albers-join.ndjson > tmp/albers-density.ndjson",
+    "convertBack2GeoJson":"ndjson-reduce < tmp/albers-density.ndjson | ndjson-map '{type: \"FeatureCollection\", features: d}' > tmp/albers-density.json",
+    "setFill":"ndjson-map -r d3 '(d.properties.fill = d3.scaleSequential(d3.interpolateViridis).domain([0, 4000])(d.properties.density), d)' < tmp/albers-density.ndjson > tmp/albers-color.ndjson",
+    "generateColorSVG":"geo2svg -n --stroke none -p 1 -w 960 -h 960 < tmp/albers-color.ndjson > tmp/albers-color.svg",
+    "processShpFileIntoDensitySVG":"npm run processShpFileIntoSVG; npm run convert2ndjson; npm run mapFeature; npm run getVarData; npm run mergeData; npm run joinData; npm run computePopDensity; npm run convertBack2GeoJson; npm run setFill; npm run generateColorSVG"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "d3": "^4.12.0",
+    
+    "d3-geo-projection": "^2.3.1",
+    "ndjson-cli": "^0.3.1",
     "shapefile": "^0.6.6"
   }
 }
